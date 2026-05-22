@@ -1,0 +1,6 @@
+{
+  "name": "SwiftCarrier Logistics Portal",
+  "description": "An enterprise-level global consignment, logistics, and carrier tracking system featuring real-time route updates, shipment cost calculations, and a complete admin management board.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

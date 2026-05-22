@@ -1,0 +1,386 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import { createServer as createViteServer } from 'vite';
+
+const app = express();
+const PORT = 3000;
+
+app.use(express.json());
+
+// ====== IN-MEMORY DATABASE FOR ENGINE SYNC (DEMO MODE FALLBACK) ======
+interface ChatMessage {
+  sender: 'user' | 'admin';
+  message: string;
+  timestamp: string;
+  readStatus: 'unread' | 'read';
+  attachmentUrl?: string;
+  attachmentType?: string;
+  attachmentName?: string;
+}
+
+interface Chat {
+  chatId: string;
+  userName: string;
+  userEmail: string;
+  messages: ChatMessage[];
+  createdAt: string;
+  updatedAt: string;
+  status: 'open' | 'closed' | 'resolved' | 'archived';
+  unreadCount: number;
+  lastMessage: string;
+  adminAssigned: string | null;
+  userTyping?: boolean;
+  adminTyping?: boolean;
+  userAgent?: string;
+  ipAddress?: string;
+  deviceType?: string;
+  isBlocked?: boolean;
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  timestamp: string;
+  author: string;
+}
+
+interface AdminNotification {
+  id: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'chat';
+  timestamp: string;
+  read: boolean;
+  chatId?: string;
+}
+
+// Global in-memory data store
+let chats: Chat[] = [];
+let announcements: Announcement[] = [
+  {
+    id: 'ann_welcome',
+    title: 'Fleet Navigation Adjustments',
+    body: 'Operational alert: Atlantic shipping corridors are seeing optimal maritime currents. Ocean voyages from Rotterdam terminal are expected 6 hours ahead of scheduled timelines.',
+    timestamp: new Date().toISOString(),
+    author: 'Klaus Fischer'
+  }
+];
+let notifications: AdminNotification[] = [];
+let blockedEmails: Set<string> = new Set();
+
+const DB_FILE = path.join(process.cwd(), 'db_persistence.json');
+
+function loadDB() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+      if (Array.isArray(data.chats)) chats = data.chats;
+      if (Array.isArray(data.announcements)) announcements = data.announcements;
+      if (Array.isArray(data.notifications)) notifications = data.notifications;
+      if (Array.isArray(data.blockedEmails)) blockedEmails = new Set(data.blockedEmails);
+      console.log(`[Database] Loaded persistent state successfully (${chats.length} chats).`);
+    } else {
+      console.log("[Database] No persistent state found. Initializing empty local DB.");
+    }
+  } catch (error) {
+    console.error("[Database] Error loading persistent state", error);
+  }
+}
+
+function saveDB() {
+  try {
+    const data = {
+      chats,
+      announcements,
+      notifications,
+      blockedEmails: Array.from(blockedEmails)
+    };
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (error) {
+    console.error("[Database] Error saving persistent state", error);
+  }
+}
+
+// Load DB on start
+loadDB();
+
+// Setup Auto-save Middleware for all state modifications (POST, PUT, DELETE)
+app.use((req, res, next) => {
+  const originalJson = res.json;
+  res.json = function(body) {
+    const isWriteCommand = ['POST', 'PUT', 'DELETE'].includes(req.method);
+    if (isWriteCommand && !req.path.includes('/typing')) {
+      process.nextTick(() => {
+        saveDB();
+      });
+    }
+    return originalJson.call(this, body);
+  };
+  next();
+});
+
+// Statically serve the workspace carrier images at their relative absolute paths across all modes
+app.use('/src/assets/images', express.static(path.join(process.cwd(), 'src/assets/images')));
+
+
+// API Endpoints for centralized synchronization in isDemoMode
+app.get('/api/chats', (req, res) => {
+  res.json(chats);
+});
+
+app.get('/api/chats/:chatId', (req, res) => {
+  const { chatId } = req.params;
+  const chat = chats.find(c => c.chatId === chatId);
+  if (!chat) {
+    return res.status(404).json({ error: 'Chat not found' });
+  }
+  res.json(chat);
+});
+
+app.post('/api/chats', (req, res) => {
+  const { chatId, userName, userEmail } = req.body;
+  let chat = chats.find(c => c.chatId === chatId);
+  if (!chat) {
+    chat = {
+      chatId,
+      userName,
+      userEmail,
+      messages: [
+        {
+          sender: 'admin',
+          message: `Hello ${userName}! Welcome to SwiftCarrier Support. How can we assist you with your freight or shipment operations today?`,
+          timestamp: new Date().toISOString(),
+          readStatus: 'read'
+        }
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'open',
+      unreadCount: 0,
+      lastMessage: 'Welcome to SwiftCarrier Support.',
+      adminAssigned: null,
+      userTyping: false,
+      adminTyping: false,
+      userAgent: req.headers['user-agent'] || 'Unknown',
+      deviceType: 'Desktop'
+    };
+    chats.unshift(chat);
+    
+    // Add admin notification
+    notifications.unshift({
+      id: 'notif_' + Math.random().toString(36).substring(2, 9),
+      message: `New support ticket generated by ${userName} (${userEmail})`,
+      type: 'chat',
+      timestamp: new Date().toISOString(),
+      read: false,
+      chatId
+    });
+  }
+  res.json(chat);
+});
+
+app.post('/api/chats/:chatId/messages', (req, res) => {
+  const { chatId } = req.params;
+  const { sender, message, attachment } = req.body;
+  const chat = chats.find(c => c.chatId === chatId);
+  if (!chat) {
+    return res.status(404).json({ error: 'Chat not found' });
+  }
+
+  const newMessage: ChatMessage = {
+    sender,
+    message,
+    timestamp: new Date().toISOString(),
+    readStatus: sender === 'admin' ? 'read' : 'unread'
+  };
+
+  if (attachment) {
+    newMessage.attachmentName = attachment.name;
+    newMessage.attachmentType = attachment.type;
+    newMessage.attachmentUrl = attachment.url;
+  }
+
+  chat.messages.push(newMessage);
+  chat.updatedAt = new Date().toISOString();
+  chat.lastMessage = message || (attachment ? `Attachment: ${attachment.name}` : '');
+  
+  if (sender === 'user') {
+    chat.unreadCount += 1;
+    
+    // Add an admin message notification
+    notifications.unshift({
+      id: 'notif_' + Math.random().toString(36).substring(2, 9),
+      message: `Message from ${chat.userName}: "${message.substring(0, 40)}${message.length > 40 ? '...' : ''}"`,
+      type: 'chat',
+      timestamp: new Date().toISOString(),
+      read: false,
+      chatId
+    });
+  }
+
+  res.json(chat);
+});
+
+app.post('/api/chats/:chatId/typing', (req, res) => {
+  const { chatId } = req.params;
+  const { sender, isTyping } = req.body;
+  const chat = chats.find(c => c.chatId === chatId);
+  if (chat) {
+    if (sender === 'user') {
+      chat.userTyping = isTyping;
+    } else {
+      chat.adminTyping = isTyping;
+    }
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/chats/:chatId/status', (req, res) => {
+  const { chatId } = req.params;
+  const { status } = req.body;
+  const chat = chats.find(c => c.chatId === chatId);
+  if (chat) {
+    chat.status = status;
+    chat.updatedAt = new Date().toISOString();
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/chats/:chatId/assign', (req, res) => {
+  const { chatId } = req.params;
+  const { adminEmail } = req.body;
+  const chat = chats.find(c => c.chatId === chatId);
+  if (chat) {
+    chat.adminAssigned = adminEmail;
+    chat.updatedAt = new Date().toISOString();
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/chats/:chatId/clear', (req, res) => {
+  const { chatId } = req.params;
+  const chat = chats.find(c => c.chatId === chatId);
+  if (chat) {
+    chat.messages = [];
+    chat.unreadCount = 0;
+    chat.lastMessage = 'Chat history cleared by administrator.';
+    chat.updatedAt = new Date().toISOString();
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/chats/:chatId/read', (req, res) => {
+  const { chatId } = req.params;
+  const { actor } = req.body;
+  const chat = chats.find(c => c.chatId === chatId);
+  if (chat) {
+    chat.messages = chat.messages.map(m => {
+      if (actor === 'admin' && m.sender === 'user') {
+        return { ...m, readStatus: 'read' as const };
+      }
+      if (actor === 'user' && m.sender === 'admin') {
+        return { ...m, readStatus: 'read' as const };
+      }
+      return m;
+    });
+    if (actor === 'admin') {
+      chat.unreadCount = 0;
+    }
+  }
+  res.json({ success: true });
+});
+
+app.delete('/api/chats/:chatId', (req, res) => {
+  const { chatId } = req.params;
+  const idx = chats.findIndex(c => c.chatId === chatId);
+  if (idx !== -1) {
+    chats.splice(idx, 1);
+  }
+  res.json({ success: true });
+});
+
+app.delete('/api/chats/:chatId/messages/:timestamp', (req, res) => {
+  const { chatId, timestamp } = req.params;
+  const chat = chats.find(c => c.chatId === chatId);
+  if (chat) {
+    chat.messages = chat.messages.filter(m => m.timestamp !== timestamp);
+    chat.updatedAt = new Date().toISOString();
+    return res.json({ success: true });
+  }
+  res.status(404).json({ error: 'Chat not found' });
+});
+
+// Announcements (Broadcast Messaging)
+app.get('/api/announcements', (req, res) => {
+  res.json(announcements);
+});
+
+app.post('/api/announcements', (req, res) => {
+  const { title, body, author } = req.body;
+  const newAnnouncement: Announcement = {
+    id: 'ann_' + Math.random().toString(36).substring(2, 9),
+    title,
+    body,
+    timestamp: new Date().toISOString(),
+    author: author || 'SwiftCarrier Dispatcher'
+  };
+  announcements.unshift(newAnnouncement);
+  res.json(newAnnouncement);
+});
+
+// Notifications
+app.get('/api/notifications', (req, res) => {
+  res.json(notifications);
+});
+
+app.post('/api/notifications/clear', (req, res) => {
+  notifications = notifications.map(n => ({ ...n, read: true }));
+  res.json({ success: true });
+});
+
+// Block and Spam
+app.post('/api/blocked_users', (req, res) => {
+  const { email } = req.body;
+  blockedEmails.add(email);
+  chats.forEach(c => {
+    if (c.userEmail.toLowerCase() === email.toLowerCase()) {
+      c.isBlocked = true;
+    }
+  });
+  res.json({ success: true });
+});
+
+app.get('/api/blocked_users/:email', (req, res) => {
+  const { email } = req.params;
+  res.json({ blocked: blockedEmails.has(email) });
+});
+
+
+// ====== VITE MIDDLEWARE INTERFACE ======
+async function startServer() {
+  if (process.env.NODE_ENV !== 'production') {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server successfully started and running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();

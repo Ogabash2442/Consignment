@@ -1,10 +1,16 @@
 {
   "hosting": {
-    "public": "swiftcarrier-logistics-portal",
+    "public": "swiftcarrier-logistics-portal/dist",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
     ]
   }
 }

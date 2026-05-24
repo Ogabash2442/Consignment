@@ -1,152 +1,81 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
+export type ShipmentStatus = 'Pending' | 'Processed' | 'In Transit' | 'Out for Delivery' | 'Delivered' | 'Exception';
 
-export type ShipmentStatus =
-  | 'Pending'
-  | 'Processing'
-  | 'Departed Facility'
-  | 'Arrived Facility'
-  | 'Customs Clearance'
-  | 'Border Check'
-  | 'In Transit'
-  | 'Out for Delivery'
-  | 'Delivered'
-  | 'Held'
-  | 'Delayed';
-
-export type ShipmentType = 'Air Freight' | 'Sea Freight' | 'Road Freight' | 'Express Delivery' | 'Cargo Delivery';
-
-export interface TimelineEvent {
-  id?: string;
-  date: string;
-  time: string;
-  location: string;
+export interface ShipmentMilestone {
+  id: string;
   status: ShipmentStatus;
-  description: string;
-}
-
-export interface RoutePoint {
   location: string;
-  lat: number;
-  lng: number;
   timestamp: string;
-  status: ShipmentStatus;
-}
-
-export interface PersonContact {
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
+  description: string;
+  isCompleted: boolean;
 }
 
 export interface Shipment {
-  id: string; // The Firestore document ID is also stored as trackingId
   trackingId: string;
-  sender: PersonContact;
-  receiver: PersonContact;
-  origin: string;
-  destination: string;
-  currentLocation: string;
-  weight: number; // in KG
-  dimensions?: {
-    length: number;
-    width: number;
-    height: number;
+  status: ShipmentStatus;
+  origin: {
+    city: string;
+    country: string;
+    sender: string;
+    address: string;
   };
-  shipmentType: ShipmentType;
-  shipmentStatus: ShipmentStatus;
-  estimatedDelivery: string; // Date string (YYYY-MM-DD)
-  createdAt: string; // ISO String
-  updatedAt: string; // ISO String
-  shipmentTimeline: TimelineEvent[];
-  shipmentImages: string[];
-  routeHistory: RoutePoint[];
-  progress: number; // 0 to 100
-  shippingCost?: number;
-  carrierNote?: string;
+  destination: {
+    city: string;
+    country: string;
+    receiver: string;
+    address: string;
+  };
+  details: {
+    weight: string;
+    type: string; // e.g. Air Freight, Ocean Cargo, Express Courier
+    dimensions: string;
+    value: string;
+    serviceLevel: string; // e.g. Express Saver, Priority Ground, Intercontinental Premium
+    estimatedDelivery: string;
+    shippingDate: string;
+  };
+  timeline: ShipmentMilestone[];
+  notes?: string;
 }
-
-export interface ContactMessage {
-  id: string;
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-  createdAt: string;
-  status: 'unread' | 'read' | 'replied';
-}
-
-export interface AdminActivityLog {
-  id: string;
-  timestamp: string;
-  action: string;
-  trackingId?: string;
-  details: string;
-  adminEmail: string;
-}
-
-export interface PortalSettings {
-  websiteName: string;
-  companyEmail: string;
-  companyPhone: string;
-  officeAddress: string;
-  supportHours: string;
-}
-
-export type Page =
-  | 'home'
-  | 'about'
-  | 'services'
-  | 'tracking'
-  | 'calculator'
-  | 'contact'
-  | 'faq'
-  | 'login'
-  | 'admin'
-  | 'terms'
-  | 'live-status';
 
 export interface ChatMessage {
-  sender: 'user' | 'admin';
-  message: string;
-  timestamp: string; // ISO string
-  readStatus: 'unread' | 'read';
-  attachmentUrl?: string;
-  attachmentType?: string;
-  attachmentName?: string;
+  id: string;
+  sender: 'user' | 'agent';
+  text: string;
+  timestamp: string;
 }
 
-export interface Chat {
-  chatId: string;
-  userName: string;
-  userEmail: string;
-  messages: ChatMessage[];
-  createdAt: string; // ISO string
-  updatedAt: string; // ISO string
-  status: 'open' | 'closed' | 'resolved' | 'archived';
-  unreadCount: number;
-  lastMessage: string;
-  adminAssigned: string | null;
-  userTyping?: boolean;
-  adminTyping?: boolean;
-  userAgent?: string;
-  ipAddress?: string;
-  deviceType?: string;
-  isBlocked?: boolean;
-}
-
-export interface SupportSession {
-  sessionId: string;
-  chatId: string;
+export interface SupportChat {
   userId: string;
   userName: string;
   userEmail: string;
-  startedAt: string;
-  endedAt?: string;
-  status: 'active' | 'closed';
-  duration?: number; // in seconds
+  messages: ChatMessage[];
+  status: 'active' | 'resolved' | 'unread';
+  lastUpdated: string;
+  subject?: string;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  category: 'info' | 'delay' | 'success';
+  timestamp: string;
+  active: boolean;
+}
+
+export interface BrandingSettings {
+  siteName: string;
+  websiteLogo: string;
+  headerLogo: string;
+  footerLogo: string;
+  contactPhone: string;
+  contactEmail: string;
+  officeAddress: string;
+  footerInformation: string;
+  websiteBrandingDetails: string;
+  heroBrandingText: string;
+  socialTwitter: string;
+  socialLinkedin: string;
+  socialInstagram: string;
 }
 

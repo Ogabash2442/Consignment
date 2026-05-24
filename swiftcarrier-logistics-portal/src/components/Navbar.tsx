@@ -1,201 +1,145 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
+import React from 'react';
+import { Shield, Radio, Menu, X, ArrowRight, UserCheck } from 'lucide-react';
+import { useLogistics } from '../LogisticsContext';
 
-import React, { useState, useEffect } from 'react';
-import { usePortal } from '../context/PortalContext';
-import { Page } from '../types';
-import { 
-  Menu, X, Ship, Clock, Globe, ArrowRight, ShieldAlert, Laptop
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { SafeImage } from './SafeImage';
+interface NavbarProps {
+  currentTab: string;
+  setCurrentTab: (tab: string) => void;
+  openChat: () => void;
+}
 
-export const Navbar: React.FC = () => {
-  const { currentPage, setCurrentPage, adminEmail, settings } = usePortal();
-  const [isOpen, setIsOpen] = useState(false);
-  const [utcTime, setUtcTime] = useState<string>('');
+export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, openChat }) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const { chats, branding } = useLogistics();
 
-  // Update real-time global clock in UTC
-  useEffect(() => {
-    const updateClock = () => {
-      const now = new Date();
-      const stringTime = now.getUTCHours().toString().padStart(2, '0') + ':' + 
-                         now.getUTCMinutes().toString().padStart(2, '0') + ':' + 
-                         now.getUTCSeconds().toString().padStart(2, '0') + ' UTC';
-      setUtcTime(stringTime);
-    };
-    updateClock();
-    const interval = setInterval(updateClock, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  // Highlight any unread chats to show that updates are occurring
+  const unreadChatsCount = chats.filter((c) => c.status === 'unread').length;
 
-  const navLinks: { name: string; page: Page }[] = [
-    { name: 'Home', page: 'home' },
-    { name: 'Services', page: 'services' },
-    { name: 'Tracking', page: 'tracking' },
-    { name: 'Cost Estimator', page: 'calculator' },
-    { name: 'FAQ', page: 'faq' },
-    { name: 'About Us', page: 'about' },
-    { name: 'Contact', page: 'contact' },
+  const navItems = [
+    { id: 'home', label: 'Home' },
+    { id: 'services', label: 'Our Services' },
+    { id: 'track', label: 'Shipment Tracking' },
+    { id: 'about', label: 'About Elite' },
+    { id: 'contact', label: 'Contact Us' }
   ];
 
-  const handleNavigate = (page: Page) => {
-    setCurrentPage(page);
-    setIsOpen(false);
-  };
-
   return (
-    <header className="sticky top-0 z-50 w-full bg-slate-900/90 border-b border-slate-800/85 backdrop-blur-md text-white">
-      {/* Top Utility Bar */}
-      <div className="bg-slate-950 px-4 py-1.5 text-xs font-mono flex flex-wrap justify-between items-center text-slate-400 border-b border-slate-900">
-        <div className="flex items-center space-x-4">
-          <span className="flex items-center text-[#ff3c00] animate-pulse">
-            <span className="h-2 w-2 rounded-full bg-[#ff3c00] mr-1.5" />
-            GLOBAL HUB SYSTEM ONLINE
-          </span>
-          <span className="hidden md:inline">|</span>
-          <span className="hidden md:flex items-center gap-1">
-            <Globe className="h-3.5 w-3.5 text-slate-500" />
-            Transit Operations Ingest: Active
-          </span>
-        </div>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-1 text-slate-300 font-semibold bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-            <Clock className="h-3 w-3 text-slate-400" />
-            <span>{utcTime}</span>
-          </div>
-          {adminEmail && (
-            <span className="text-amber-500 font-semibold hidden sm:flex items-center gap-1 text-[11px] bg-amber-950/40 px-2 py-0.5 rounded border border-amber-900/30">
-              <ShieldAlert className="h-3 w-3" />
-              Admin: {adminEmail}
-            </span>
-          )}
-        </div>
+    <header className="sticky top-0 z-50 w-full border-b border-slate-100 bg-white/80 backdrop-blur-md transition-all duration-300">
+      {/* Top micro Announcement ticker */}
+      <div className="bg-slate-900 px-4 py-1.5 text-center text-[11px] font-medium tracking-wider text-slate-300 uppercase flex items-center justify-center gap-2">
+        <span className="flex h-1.5 w-1.5 items-center rounded-full bg-emerald-400"></span>
+        <span>{branding.siteName} Satellite Network: Active 100% Connectivity</span>
+        <span className="hidden md:inline text-slate-500">|</span>
+        <span className="hidden md:inline">Global customs clearance delays: 0hr</span>
       </div>
 
-      {/* Main Navigation Row */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          
-           {/* Corporate Brand Identity */}
-          <div className="flex items-center cursor-pointer space-x-2" onClick={() => handleNavigate('home')}>
-            <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-lg flex items-center justify-center h-10 w-10 overflow-hidden">
-              <SafeImage 
-                src="/src/assets/images/company_logo_1779474855785.png" 
-                alt="SwiftCarrier Enterprise Logo"
-                className="h-full w-full object-contain"
-                fallbackType="logo"
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-sans font-bold text-lg tracking-tight text-white leading-none">
-                {settings.websiteName.split(' ')[0]}
-                <span className="text-[#ff3c00] font-medium font-mono text-sm uppercase block tracking-widest mt-0.5 font-sans">
-                  {settings.websiteName.split(' ')[1] || 'Global'}
-                </span>
-              </span>
-            </div>
+      <div className="mx-auto flex max-w-7xl h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Brand identity */}
+        <button
+          onClick={() => setCurrentTab('home')}
+          className="flex items-center gap-2.5 group text-left cursor-pointer transition-transform"
+        >
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-sky-400 font-bold font-mono text-sm shadow-md transition-transform group-hover:rotate-6 select-none">
+            {branding.headerLogo || "A"}
+            <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-sky-450 bg-sky-400"></div>
           </div>
+          <div>
+            <span className="block font-heading text-base font-bold tracking-tight text-slate-900">
+              {branding.siteName}
+            </span>
+            <span className="block text-[9px] font-semibold tracking-widest text-sky-600 uppercase leading-none">
+              Terminal Node
+            </span>
+          </div>
+        </button>
 
-          {/* Desktop Links */}
-          <nav className="hidden lg:flex space-x-1 items-center">
-            {navLinks.map((link) => (
+        {/* Desktop navigation */}
+        <nav className="hidden md:flex items-center gap-8">
+          {navItems.map((item) => {
+            const isActive = currentTab === item.id;
+            return (
               <button
-                key={link.page}
-                onClick={() => handleNavigate(link.page)}
-                className={`px-3.5 py-2 rounded-md font-sans text-sm font-medium transition-all duration-200 cursor-pointer ${
-                  currentPage === link.page
-                    ? 'text-white bg-slate-800/80 border border-slate-700/50 shadow-sm shadow-[#ff3c00]/10'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/40 hover:border hover:border-transparent'
+                key={item.id}
+                onClick={() => setCurrentTab(item.id)}
+                className={`relative py-2 text-sm font-medium tracking-wide transition-colors cursor-pointer ${
+                  isActive ? 'text-sky-600 font-semibold' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                {link.name}
+                {item.label}
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 h-0.5 w-full bg-sky-500 rounded-full" />
+                )}
               </button>
-            ))}
-          </nav>
+            );
+          })}
+        </nav>
 
-          {/* Call-to-action button */}
-          <div className="hidden lg:flex items-center space-x-4">
-            {adminEmail ? (
-              <button
-                onClick={() => handleNavigate('admin')}
-                className="bg-amber-600 hover:bg-amber-500 text-slate-950 text-xs font-semibold px-4.5 py-1.8 rounded-full shadow-lg transition-all duration-180 flex items-center space-x-1 border border-amber-400 cursor-pointer"
-              >
-                <Laptop className="h-3.5 w-3.5" />
-                <span>Dashboard</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => handleNavigate('login')}
-                className="bg-[#ff3c00] hover:bg-[#e03500] text-white text-xs font-semibold px-5  py-2 rounded-full shadow-md shadow-[#ff3c00]/25 transition-all duration-200 flex items-center space-x-1 transform hover:translate-x-0.5 cursor-pointer"
-              >
-                <span>Login Access</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
+        {/* CTA buttons */}
+        <div className="hidden md:flex items-center gap-4">
+          {/* Login Access Button */}
+          <button
+            onClick={() => setCurrentTab('dashboard')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold leading-normal transition-all cursor-pointer shadow-xs border ${
+              currentTab === 'dashboard'
+                ? 'bg-sky-50 border-sky-200 text-sky-700 font-extrabold'
+                : 'bg-slate-900 border-slate-950 text-slate-100 hover:bg-slate-800'
+            }`}
+          >
+            <Shield className="h-3.5 w-3.5 text-sky-400" />
+            <span>Login Access</span>
+          </button>
+        </div>
 
-          {/* Mobile menu trigger */}
-          <div className="flex lg:hidden">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-850 focus:outline-none"
-            >
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
-          </div>
+        {/* Mobile menu button */}
+        <div className="flex md:hidden items-center gap-2">
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-700 cursor-pointer"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
 
-      {/* Mobile Drawer (Framer Motion) */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="lg:hidden border-t border-slate-800 bg-slate-900"
+      {/* Mobile drawer */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-slate-100 bg-white/95 px-4 pt-3 pb-6 space-y-2 animate-fade-in">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setCurrentTab(item.id);
+                setMobileMenuOpen(false);
+              }}
+              className={`block w-full text-left rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+                currentTab === item.id
+                  ? 'bg-sky-50 text-sky-600'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+          <div className="h-px bg-slate-100 my-3"></div>
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              setCurrentTab('dashboard');
+            }}
+            className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-bold transition-all ${
+              currentTab === 'dashboard'
+                ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                : 'bg-slate-900 text-white hover:bg-slate-800'
+            }`}
           >
-            <div className="px-2 pt-2 pb-4 space-y-1 sm:px-3">
-              {navLinks.map((link) => (
-                <button
-                  key={link.page}
-                  onClick={() => handleNavigate(link.page)}
-                  className={`w-full text-left block px-3 py-2.5 rounded-md text-base font-medium transition-colors ${
-                    currentPage === link.page
-                      ? 'text-white bg-[#ff3c00]/15 border-l-4 border-[#ff3c00]'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                  }`}
-                >
-                  {link.name}
-                </button>
-              ))}
-              <div className="pt-4 border-t border-slate-800 px-3">
-                {adminEmail ? (
-                  <button
-                    onClick={() => handleNavigate('admin')}
-                    className="w-full flex items-center justify-center space-x-2 bg-amber-600 text-[#0c1424] font-bold py-2.5 px-4 rounded-xl shadow-lg"
-                  >
-                    <Laptop className="h-5 w-5" />
-                    <span>Go to Admin Dashboard</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleNavigate('login')}
-                    className="w-full flex items-center justify-center space-x-2 bg-[#ff3c00] text-white font-bold py-2.5 px-4 rounded-xl shadow-lg"
-                  >
-                    <span>Login Access</span>
-                    <ArrowRight className="h-5 w-5" />
-                  </button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <span className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-sky-400" />
+              <span>Login Access</span>
+            </span>
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </header>
   );
 };

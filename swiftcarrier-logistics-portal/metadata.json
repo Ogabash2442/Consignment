@@ -1,6 +1,8 @@
 {
-  "name": "SwiftCarrier Logistics Portal",
-  "description": "An enterprise-level global consignment, logistics, and carrier tracking system featuring real-time route updates, shipment cost calculations, and a complete admin management board.",
+  "name": "Apex Global Logistics",
+  "description": "Premium modern international logistics, cargo cargo-handling, and real-time shipment tracking suite with instant support chat.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

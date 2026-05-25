@@ -479,30 +479,31 @@ export const LogisticsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.log("[LogisticsContext] Admin custom session verified: authenticated.");
       setIsAuthenticated(true);
       setIsAdminLoading(false);
+if (db) {
+      console.log("[LogisticsContext] Active Admin: Starting stable master real-time Firestore synchronization for chats.");
 
-      if (db) {
-        console.log("[LogisticsContext] Active Admin: Starting stable master real-time Firestore synchronization for chats from admin.js.");
-        
-        // Use subscribeToAllChats from admin.js!
-        import('./admin').then(({ subscribeToAllChats }) => {
-          unsubscribeChats = subscribeToAllChats((chatList) => {
-            setChats((prevChats) => {
-              return chatList.map((headerItem) => {
-                const existingChat = prevChats.find(c => c.userId === headerItem.userId);
-                if (existingChat && existingChat.messages.length > 0) {
-                  return {
-                    ...headerItem,
-                    messages: existingChat.messages // Preserves full detailed messages from local state or the active stream
-                  };
-                }
-                return headerItem;
-              });
+      try {
+        // Safe, direct execution without the breaking inline import loop
+        unsubscribeChats = subscribeToAllChats((chatList) => {
+          setChats((prevChats) => {
+            return chatList.map((headerItem) => {
+              const existingChat = prevChats.find(c => c.userId === headerItem.userId);
+              if (existingChat && existingChat.messages.length > 0) {
+                return {
+                  ...headerItem,
+                  messages: existingChat.messages
+                };
+              }
+              return headerItem;
             });
           });
-        }).catch((err) => {
-          console.error("[LogisticsContext] Failed to load admin.js module:", err);
-          startPollingFallback();
         });
+      } catch (err) {
+        console.error("[LogisticsContext] Failed to load real-time stream, triggering fallback:", err);
+        // Your original fallback remains completely untouched and safe here:
+        startPollingFallback();
+      }
+    }
       } else {
         startPollingFallback();
       }

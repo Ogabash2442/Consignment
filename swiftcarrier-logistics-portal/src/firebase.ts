@@ -16,9 +16,8 @@ try {
     
     try {
       // Force experimental HTTP long-polling to prevent websocket handshake blockage in container proxies or inside sandboxed frames
-      db = initializeFirestore(app, {
-        experimentalForceLongPolling: true
-      }, firebaseConfig.firestoreDatabaseId);
+     // ✅ Clean WebSocket configuration without forced HTTP polling parameters
+db = initializeFirestore(app, {}, firebaseConfig.firestoreDatabaseId);
       console.log("Firebase App & Firestore initialized statically with Force Long Polling, Database ID:", firebaseConfig.firestoreDatabaseId);
     } catch (e) {
       db = getFirestore(app, firebaseConfig.firestoreDatabaseId);

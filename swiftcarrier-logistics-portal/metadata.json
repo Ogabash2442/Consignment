@@ -1,8 +1,0 @@
-{
-  "name": "Apex Global Logistics",
-  "description": "Premium modern international logistics, cargo cargo-handling, and real-time shipment tracking suite with instant support chat.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}

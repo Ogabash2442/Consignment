@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "SupportChat": {
+      "title": "SupportChat",
+      "description": "Represents a single support chat session with a carrier or dispatcher client.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "status": { "type": "string" },
+        "lastUpdated": { "type": "string" },
+        "subject": { "type": "string" }
+      },
+      "required": ["userId", "userName", "status", "lastUpdated"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A single text message inside a chat thread session.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sender": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "sender", "text", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/chats/{chatId}": {
+      "schema": "SupportChat",
+      "description": "Root collection storing metadata for active user chat rooms."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Sub-collection of messages ordered by timestamp for a thread."
+    },
+    "/branding/{docId}": {
+      "schema": "object",
+      "description": "Master branding settings."
+    },
+    "/announcements/{annId}": {
+      "schema": "object",
+      "description": "System-wide announcment alerts."
+    },
+    "/shipments/{shipId}": {
+      "schema": "object",
+      "description": "Global shipment, waybill and tracking records database."
+    }
+  }
+}

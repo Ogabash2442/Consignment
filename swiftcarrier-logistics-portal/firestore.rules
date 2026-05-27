@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Chat sessions and their subcollections
+    match /chats/{chatId} {
+      // Allow read/write access to allow global visitor chats and real-time operator sync
+      allow read, write: if true;
+
+      match /messages/{messageId} {
+        allow read, write: if true;
+      }
+    }
+
+    // Branding configurations
+    match /branding/{docId} {
+      allow read, write: if true;
+    }
+
+    // Announcements
+    match /announcements/{annId} {
+      allow read, write: if true;
+    }
+
+    // Shipments
+    match /shipments/{shipId} {
+      allow read, write: if true;
+    }
+  }
+}
